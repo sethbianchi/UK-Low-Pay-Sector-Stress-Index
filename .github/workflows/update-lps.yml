@@ -1,0 +1,32 @@
+name: Refresh UK LPS data
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # every Monday 06:00 UTC — same schedule as the RVI project
+  workflow_dispatch: {}    # adds a manual "Run workflow" button on GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run LPS pipeline
+        run: python3 fetch_and_score.py
+
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "lps-bot"
+          git config user.email "actions@github.com"
+          git add data.json
+          git diff --staged --quiet || git commit -m "Auto-refresh LPS data $(date -u +%Y-%m-%d)"
+          git push
