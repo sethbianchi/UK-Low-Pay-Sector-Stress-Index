@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UK Low-Pay Sector Stress Index (LPS) — Seth Bianchi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#10161d; --panel-2:#141c25; --line:#223041;
+    --ink:#e7edf3; --ink-dim:#93a5b8; --ink-faint:#5c7086;
+    --amber:#d9a441; --green:#4caf7d; --red:#d9604f;
+    --mono:'IBM Plex Mono','Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  ::selection{background:var(--amber);color:#12100a;}
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px 80px;}
+
+  header.top{border-bottom:1px solid var(--line);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;
+    font-family:var(--mono);font-size:12px;letter-spacing:0.06em;color:var(--ink-dim);
+    position:sticky;top:0;background:rgba(11,15,20,0.92);backdrop-filter:blur(6px);z-index:10;}
+  header.top .dot{color:var(--green);}
+  header.top .right{display:flex;gap:18px;}
+
+  .hero{padding:56px 24px 28px;border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:18px;}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(32px,5.6vw,54px);line-height:1.04;margin:0 0 18px;letter-spacing:-0.01em;}
+  h1 em{font-style:italic;color:var(--amber);font-weight:400;}
+  .hero p.sub{color:var(--ink-dim);font-size:17px;line-height:1.6;max-width:660px;margin:0 0 30px;}
+
+  .gauge-row{display:grid;grid-template-columns:260px 1fr;gap:40px;align-items:center;margin-top:20px;}
+  @media (max-width:720px){.gauge-row{grid-template-columns:1fr;}}
+  .gauge-box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:24px;text-align:center;}
+  .gauge-score{font-family:var(--mono);font-weight:700;font-size:64px;line-height:1;color:var(--amber);}
+  .gauge-label{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:0.1em;margin-top:6px;text-transform:uppercase;}
+  .gauge-band{margin-top:16px;font-family:var(--mono);font-size:13px;padding:6px 10px;border-radius:3px;display:inline-block;
+    background:rgba(217,164,65,0.12);color:var(--amber);border:1px solid rgba(217,164,65,0.35);}
+
+  .meter{height:8px;background:#1b2530;border-radius:4px;overflow:hidden;margin-top:18px;position:relative;}
+  .meter-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--amber) 60%,var(--red));}
+  .meter-marker{position:absolute;top:-4px;width:2px;height:16px;background:#fff;}
+  .meter-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:6px;}
+  .kicker-list{font-size:14px;color:var(--ink-dim);line-height:1.7;}
+  .kicker-list b{color:var(--ink);font-weight:600;}
+
+  section{padding:44px 24px;border-bottom:1px solid var(--line);}
+  section h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0 0 8px;}
+  section .sec-note{color:var(--ink-faint);font-size:13px;margin-bottom:26px;max-width:640px;}
+
+  .indicator-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:760px){.indicator-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width:480px){.indicator-grid{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:18px;}
+  .card .label{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;}
+  .card .value{font-family:var(--mono);font-size:28px;font-weight:700;margin:8px 0 4px;}
+  .card .delta{font-family:var(--mono);font-size:12px;}
+  .up{color:var(--red);} .down{color:var(--green);} .flat{color:var(--ink-dim);}
+  .card .src{font-size:11px;color:var(--ink-faint);margin-top:10px;}
+
+  .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:20px;margin-bottom:16px;}
+  .chart-card h3{font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-dim);margin:0 0 14px;font-weight:500;}
+  canvas{max-height:260px;}
+
+  table.methodology{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px;}
+  table.methodology th,table.methodology td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);}
+  table.methodology th{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:500;}
+  table.methodology td.num{font-family:var(--mono);color:var(--amber);}
+  .weight-bar{height:6px;background:#1b2530;border-radius:3px;overflow:hidden;width:90px;display:inline-block;vertical-align:middle;margin-right:8px;}
+  .weight-fill{height:100%;background:var(--amber);}
+
+  pre{background:#060a0e;border:1px solid var(--line);border-radius:4px;padding:18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65;color:#c9d6e3;}
+  pre .c{color:#5c7086;} pre .k{color:#d9a441;} pre .s{color:#4caf7d;}
+
+  .pipeline-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+  @media (max-width:760px){.pipeline-steps{grid-template-columns:1fr 1fr;}}
+  .step{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:14px;font-size:13px;color:var(--ink-dim);}
+  .step .n{font-family:var(--mono);color:var(--amber);font-size:11px;}
+  .step strong{color:var(--ink);display:block;margin:4px 0;font-size:14px;}
+
+  .nlw-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;}
+  .nlw-table th,.nlw-table td{padding:8px;text-align:left;border-bottom:1px solid var(--line);font-family:var(--mono);}
+  .nlw-table th{color:var(--ink-faint);font-weight:500;text-transform:uppercase;font-size:11px;}
+  .nlw-table td.rate{color:var(--amber);}
+  .nlw-table tr:last-child td{color:var(--ink);font-weight:600;}
+
+  .limits{font-size:14px;color:var(--ink-dim);line-height:1.75;}
+  .limits li{margin-bottom:8px;}
+
+  footer{padding:40px 24px 60px;text-align:center;}
+  footer .credit{font-family:var(--mono);font-size:13px;color:var(--ink-faint);letter-spacing:0.04em;}
+  footer .credit b{color:var(--amber);font-weight:600;}
+  footer .stamp{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:10px;}
+  footer a{color:var(--ink-dim);}
+
+  .sources{font-size:13px;color:var(--ink-dim);line-height:1.8;}
+  .sources a{color:var(--amber);text-decoration:none;border-bottom:1px dotted rgba(217,164,65,0.4);}
+
+  .stale-banner{display:none;background:rgba(217,96,79,0.12);border:1px solid rgba(217,96,79,0.4);color:var(--red);
+    font-family:var(--mono);font-size:12px;padding:10px 24px;text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="stale-banner" id="staleBanner">⚠ Live data.json failed to load — showing last cached build.</div>
+
+<header class="top">
+  <div><span class="dot">●</span> UK-LPS · AUTO-REFRESHING</div>
+  <div class="right">
+    <span>ONS</span>
+    <span id="stampTop">LOADING…</span>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap" style="padding:0;">
+    <div class="eyebrow">Low-Pay Sector Stress Index — United Kingdom</div>
+    <h1>Who absorbs the cost<br>of a <em>higher minimum wage?</em></h1>
+    <p class="sub">A live index tracking employment momentum in the UK's two largest low-pay sectors — retail and hospitality — around each April National Living Wage uprating, sourced directly from ONS workforce jobs data. Refreshed automatically on the same weekly schedule as the Recession Vulnerability Index.</p>
+
+    <div class="gauge-row">
+      <div class="gauge-box">
+        <div class="gauge-score" id="gaugeScore">--</div>
+        <div class="gauge-label">LPS Score / 100</div>
+        <div class="gauge-band" id="gaugeBand">Loading…</div>
+      </div>
+      <div>
+        <div class="meter">
+          <div class="meter-fill" style="width:100%"></div>
+          <div class="meter-marker" id="meterMarker" style="left:0%"></div>
+        </div>
+        <div class="meter-scale">
+          <span>0 — Low</span><span>25</span><span>50 — Elevated</span><span>75</span><span>100 — High</span>
+        </div>
+        <p class="kicker-list" id="kickerText">Loading live indicators…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="wrap" style="padding-left:0;padding-right:0;">
+  <h2>Live sector data</h2>
+  <div class="sec-note">Latest published ONS workforce jobs figures, plus the current National Living Wage uprating.</div>
+  <div class="indicator-grid" id="indicatorGrid"></div>
+</section>
+
+<section class="wrap" style="padding-left:0;padding-right:0;">
+  <h2>National Living Wage upratings</h2>
+  <div class="sec-note">Each April rise since the current NLW structure began — the event this index is built around.</div>
+  <table class="nlw-table" id="nlwTable">
+    <tr><th>Effective</th><th>Rate (21+)</th><th>Increase</th></tr>
+  </table>
+</section>
+
+<section class="wrap" style="padding-left:0;padding-right:0;">
+  <h2>Sector employment, 2000–present</h2>
+  <div class="sec-note">Workforce jobs (thousands) in each sector, quarterly, seasonally adjusted — charted against 26 years of history including the 2008–09 and 2020 shocks.</div>
+  <div class="chart-card"><h3>Retail & wholesale trade jobs, thousands (ONS JWS3)</h3><canvas id="chartRetail"></canvas></div>
+  <div class="chart-card"><h3>Accommodation & food service jobs, thousands (ONS JWS5)</h3><canvas id="chartHosp"></canvas></div>
+</section>
+
+<section class="wrap" style="padding-left:0;padding-right:0;">
+  <h2>Methodology</h2>
+  <div class="sec-note">Four sub-indicators, each converted to a 0–100 stress sub-score, combined as a weighted average.</div>
+  <table class="methodology" id="methodTable">
+    <tr><th>Indicator</th><th>Transformation</th><th>Weight</th><th>Sub-score</th></tr>
+  </table>
+</section>
+
+<section class="wrap" style="padding-left:0;padding-right:0;">
+  <h2>Data pipeline</h2>
+  <div class="sec-note">Reads <code>data.json</code>, regenerated on a schedule by GitHub Actions — identical setup to the Recession Vulnerability Index, so both projects refresh Monday mornings automatically.</div>
+  <div class="pipeline-steps">
+    <div class="step"><span class="n">01</span><strong>Fetch</strong>Pulls ONS's generator CSV endpoints for retail (JWS3) and hospitality (JWS5) workforce jobs.</div>
+    <div class="step"><span class="n">02</span><strong>Parse</strong>Extracts quarterly period→value pairs for each sector back to 1978.</div>
+    <div class="step"><span class="n">03</span><strong>Score</strong>Computes year-on-year and quarter-on-quarter momentum, combines with the latest NLW uprating size.</div>
+    <div class="step"><span class="n">04</span><strong>Publish</strong>Commits an updated <code>data.json</code>; GitHub Pages redeploys automatically.</div>
+  </div>
+
+  <pre><span class="c"># .github/workflows/update-lps.yml — same schedule as the RVI project</span>
+<span class="k">on</span>:
+  schedule:
+    <span class="c">- cron: '0 6 * * 1'</span>  <span class="c"># every Monday 06:00 UTC</span>
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 fetch_and_score.py
+      - run: |
+          git config user.name  "lps-bot"
+          git config user.email "actions@github.com"
+          git add data.json
+          git diff --staged --quiet || git commit -m <span class="s">"Auto-refresh LPS data"</span>
+          git push
+</pre>
+</section>
+
+<section class="wrap" style="padding-left:0;padding-right:0;">
+  <h2>Limitations</h2>
+  <ul class="limits">
+    <li><b>Correlation, not causation.</b> Sector employment moves for many reasons (consumer demand, weather, seasonal hiring) — a dip after an uprating isn't proof the wage rise caused it.</li>
+    <li><b>Only two sectors.</b> Care and cleaning are also low-pay-heavy but harder to isolate cleanly in ONS's industry breakdown at this level.</li>
+    <li><b>NLW history is entered by hand once a year</b> when the new rate is announced — the only part of this pipeline that isn't fully automatic.</li>
+    <li><b>Weights are judgement-based</b>, not fitted against a formal minimum-wage employment-elasticity model — a natural next step for a dissertation-level version of this.</li>
+  </ul>
+</section>
+
+<section class="wrap" style="padding-left:0;padding-right:0;border-bottom:none;">
+  <h2>Sources</h2>
+  <p class="sources">
+    ONS, Workforce jobs — retail & wholesale trade (JWS3) — <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/jws3/lms" target="_blank">ons.gov.uk/.../jws3/lms</a><br>
+    ONS, Workforce jobs — accommodation & food service (JWS5) — <a href="https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/jws5/lms" target="_blank">ons.gov.uk/.../jws5/lms</a><br>
+    Low Pay Commission / GOV.UK, National Living Wage rates — <a href="https://www.gov.uk/national-minimum-wage-rates" target="_blank">gov.uk/national-minimum-wage-rates</a>
+  </p>
+</section>
+
+<footer>
+  <div class="credit">Built by <b>Seth Bianchi</b></div>
+  <div class="stamp" id="stampBottom">UK Low-Pay Sector Stress Index · data pulled live from ONS</div>
+</footer>
+
+<script>
+Chart.defaults.color = '#93a5b8';
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 10;
+
+function baseOpts(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#0b0f14', borderColor:'#223041', borderWidth:1, titleColor:'#e7edf3', bodyColor:'#e7edf3' } },
+    scales:{ x:{ grid:{color:'rgba(34,48,65,0.5)'}, ticks:{maxTicksLimit:9} }, y:{ grid:{color:'rgba(34,48,65,0.5)'} } },
+    elements:{ point:{radius:0}, line:{borderWidth:1.6, tension:0.15} }
+  };
+}
+function bandClass(band){
+  if(band.startsWith('Low')) return {c:'#4caf7d'};
+  if(band.startsWith('Moderate')) return {c:'#d9a441'};
+  return {c:'#d9604f'};
+}
+
+const METHOD_ROWS = [
+  ["Retail sector momentum","Year-on-year change in retail/wholesale jobs (inverted — falling jobs = higher stress)","retail_momentum",0.30],
+  ["Hospitality sector momentum","Year-on-year change in accommodation/food service jobs (inverted)","hospitality_momentum",0.30],
+  ["Quarterly trend","Average latest-quarter change across both sectors (inverted)","quarterly_trend",0.20],
+  ["Wage cost pressure","Size of the latest April NLW uprating, scaled 0–8%","wage_pressure",0.20],
+];
+
+fetch('./data.json?t=' + Date.now())
+  .then(r => { if(!r.ok) throw new Error('data.json ' + r.status); return r.json(); })
+  .then(render)
+  .catch(err => {
+    console.error('Failed to load data.json:', err);
+    document.getElementById('staleBanner').style.display = 'block';
+    document.getElementById('stampTop').textContent = 'DATA UNAVAILABLE';
+  });
+
+function render(d){
+  document.getElementById('stampTop').textContent = 'REFRESHED ' + d.generated_at_utc;
+  document.getElementById('stampBottom').textContent = 'UK Low-Pay Sector Stress Index · data pulled live from ONS · last refreshed ' + d.generated_at_utc;
+
+  document.getElementById('gaugeScore').textContent = d.lps_score.toFixed(1);
+  const bandEl = document.getElementById('gaugeBand');
+  bandEl.textContent = d.lps_band;
+  const bc = bandClass(d.lps_band);
+  bandEl.style.color = bc.c; bandEl.style.borderColor = bc.c + '55'; bandEl.style.background = bc.c + '20';
+  document.getElementById('gaugeScore').style.color = bc.c;
+  document.getElementById('meterMarker').style.left = Math.min(100, d.lps_score) + '%';
+
+  const i = d.inputs;
+  document.getElementById('kickerText').innerHTML =
+    `Retail jobs are ${i.retail_yoy_pct>=0?'up':'down'} ${Math.abs(i.retail_yoy_pct)}% y/y and hospitality jobs are ${i.hospitality_yoy_pct>=0?'up':'down'} ${Math.abs(i.hospitality_yoy_pct)}% y/y, ` +
+    `against a National Living Wage that rose ${i.latest_nlw_increase_pct}% to £${i.latest_nlw_rate_gbp} in ${i.latest_nlw_effective}. Full breakdown below.`;
+
+  const grid = document.getElementById('indicatorGrid');
+  grid.innerHTML = `
+    <div class="card"><div class="label">Retail sector jobs</div><div class="value">${i.retail_jobs_latest_thousands.toLocaleString()}k</div>
+      <div class="delta ${i.retail_yoy_pct<0?'up':'down'}">${i.retail_yoy_pct>=0?'▲ +':'▼ '}${i.retail_yoy_pct}% y/y</div>
+      <div class="src">ONS series JWS3 · ${i.retail_period}</div></div>
+    <div class="card"><div class="label">Hospitality sector jobs</div><div class="value">${i.hospitality_jobs_latest_thousands.toLocaleString()}k</div>
+      <div class="delta ${i.hospitality_yoy_pct<0?'up':'down'}">${i.hospitality_yoy_pct>=0?'▲ +':'▼ '}${i.hospitality_yoy_pct}% y/y</div>
+      <div class="src">ONS series JWS5 · ${i.hospitality_period}</div></div>
+    <div class="card"><div class="label">Retail q/q change</div><div class="value">${i.retail_qoq_pct>=0?'+':''}${i.retail_qoq_pct}%</div>
+      <div class="delta flat">quarter-on-quarter</div>
+      <div class="src">ONS series JWS3</div></div>
+    <div class="card"><div class="label">Hospitality q/q change</div><div class="value">${i.hospitality_qoq_pct>=0?'+':''}${i.hospitality_qoq_pct}%</div>
+      <div class="delta flat">quarter-on-quarter</div>
+      <div class="src">ONS series JWS5</div></div>
+    <div class="card"><div class="label">Current NLW (21+)</div><div class="value">£${i.latest_nlw_rate_gbp}</div>
+      <div class="delta flat">effective ${i.latest_nlw_effective}</div>
+      <div class="src">Low Pay Commission</div></div>
+    <div class="card"><div class="label">Latest NLW uprating</div><div class="value">+${i.latest_nlw_increase_pct}%</div>
+      <div class="delta flat">year-on-year rate rise</div>
+      <div class="src">Low Pay Commission</div></div>
+  `;
+
+  const nlwTable = document.getElementById('nlwTable');
+  const keys = Object.keys(d.nlw_history).sort();
+  keys.forEach((k, idx) => {
+    const rate = d.nlw_history[k];
+    const prev = idx > 0 ? d.nlw_history[keys[idx-1]] : null;
+    const inc = prev ? ((rate-prev)/prev*100).toFixed(1)+'%' : '—';
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${k}</td><td class="rate">£${rate.toFixed(2)}</td><td>${inc}</td>`;
+    nlwTable.appendChild(row);
+  });
+
+  const table = document.getElementById('methodTable');
+  METHOD_ROWS.forEach(([name, desc, key, weight]) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${name}</td><td>${desc}</td>
+      <td><span class="weight-bar"><span class="weight-fill" style="width:${weight*334}%"></span></span>${Math.round(weight*100)}%</td>
+      <td class="num">${d.sub_scores[key].toFixed(1)}</td>`;
+    table.appendChild(row);
+  });
+  const totalRow = document.createElement('tr');
+  totalRow.innerHTML = `<td colspan="3" style="text-align:right;font-family:var(--mono);color:var(--ink-dim);">Weighted LPS</td>
+    <td class="num" style="font-size:18px;">${d.lps_score.toFixed(1)}</td>`;
+  table.appendChild(totalRow);
+
+  const cd = d.chart_data;
+  const mk = (obj) => ({ labels: Object.keys(obj), values: Object.values(obj) });
+  const rt = mk(cd.retail_jobs_quarterly), hp = mk(cd.hospitality_jobs_quarterly);
+
+  new Chart(document.getElementById('chartRetail'), { type:'line',
+    data:{ labels: rt.labels, datasets:[{ data: rt.values, borderColor:'#d9a441', backgroundColor:'rgba(217,164,65,0.08)', fill:true }] },
+    options: baseOpts() });
+
+  new Chart(document.getElementById('chartHosp'), { type:'line',
+    data:{ labels: hp.labels, datasets:[{ data: hp.values, borderColor:'#4caf7d', backgroundColor:'rgba(76,175,125,0.08)', fill:true }] },
+    options: baseOpts() });
+}
+</script>
+
+</body>
+</html>
